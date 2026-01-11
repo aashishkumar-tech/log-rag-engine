@@ -1,0 +1,41 @@
+# Stable cohesive LangChain 0.2.x stack (removes incompatible langchain-huggingface)
+python-dotenv==1.0.1
+
+# Embeddings / Vector
+sentence-transformers==2.7.0
+faiss-cpu==1.8.0.post1
+rank-bm25==0.2.2
+fastembed==0.3.5  # NEW: fast lightweight embedding backend (enable with FAST_EMBED=1)
+xxhash==3.4.1  # NEW: fast hashing for embedding cache
+
+# LangChain ecosystem (aligned)
+langchain==0.2.17
+langchain-community==0.2.11
+langchain-openai==0.1.17
+# (No explicit langchain-core / langsmith pins; pulled compatible versions)
+# Removed: langchain-huggingface (was forcing core>=0.3.59 + langsmith>=0.3.x)
+
+# OpenAI / Azure
+openai==1.40.6
+
+# API / Web
+fastapi==0.112.0
+uvicorn==0.30.1
+
+# Upload parsing
+python-multipart
+
+# Testing
+httpx==0.27.0
+pytest==8.3.1
+
+# XLSX export
+openpyxl==3.1.5
+
+# Reinstall steps:
+# 1) pip uninstall -y langchain-huggingface langchain-core langsmith || true
+# 2) pip install --no-cache-dir --upgrade --force-reinstall -r requirements.txt
+# If cache issues: pip cache purge
+
+#Groq 
+langchain-groq>=0.1.0

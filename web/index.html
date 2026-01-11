@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Log Analyzer</title>
+    <link rel="stylesheet" href="styles.css?v=13" />
+    <style>
+        /* Stepper (updated with labels, softer contrast) */
+        #pipelineSteps {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            margin: 18px 0 28px;
+            gap: 0;
+            font-family: system-ui, Arial, sans-serif;
+            position: relative;
+            padding-bottom: 18px;
+        }
+
+        #pipelineSteps .step {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 0 0;
+        }
+
+        /* Base circle */
+        #pipelineSteps .circle {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #374151;
+            color: #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background .35s, color .35s, transform .35s, box-shadow .35s;
+            box-shadow: 0 0 0 1px #1f2937 inset;
+        }
+
+        /* Active (primary blue) */
+        #pipelineSteps .step.active .circle {
+            background: #2563eb;
+            color: #fff;
+            transform: scale(1.05);
+            box-shadow: 0 0 0 1px #1d4ed8, 0 0 0 4px rgba(37, 99, 235, .18);
+        }
+
+        /* Done: switch to bluish shades */
+        #pipelineSteps .step.done .circle {
+            background: #0ea5e9;
+            color: #e0f2fe;
+            box-shadow: 0 0 0 1px #0284c7, 0 0 0 3px rgba(14, 165, 233, .22);
+        }
+
+        /* Connector */
+        #pipelineSteps .connector {
+            height: 4px;
+            width: 74px;
+            background: #2a3038;
+            border-radius: 2px;
+            margin: 15px 18px 0;
+            transition: background .45s;
+        }
+
+        #pipelineSteps .step.done+.connector {
+            background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+        }
+
+        #pipelineSteps .label {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: .3px;
+            color: #6b7280;
+            white-space: nowrap;
+            pointer-events: none;
+            transition: color .35s;
+        }
+
+        #pipelineSteps .step.active .label {
+            color: #2563eb;
+        }
+
+        #pipelineSteps .step.done .label {
+            color: #38bdf8;
+        }
+
+        @media (max-width:720px) {
+            #pipelineSteps .connector {
+                width: 46px;
+                margin: 15px 10px 0;
+            }
+
+            #pipelineSteps .circle {
+                width: 30px;
+                height: 30px;
+                font-size: 13px;
+            }
+
+            #pipelineSteps .label {
+                top: 37px;
+                font-size: 10px;
+            }
+        }
+
+        .tabs {
+            display: none !important;
+        }
+
+        .tab-panel {
+            display: block !important;
+            margin-bottom: 18px;
+        }
+
+        #summaryBox {
+            max-height: 260px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+
+        #detailArea.locked {
+            pointer-events: none;
+            opacity: .35;
+            filter: grayscale(.4);
+        }
+
+        #detailArea.locked::after {
+            content: 'Building index...';
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            font-size: 11px;
+            background: #2563eb;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #fff;
+            letter-spacing: .5px;
+        }
+
+        body.locked-all [data-lockable] {
+            pointer-events: none;
+            opacity: .45;
+            filter: grayscale(.3);
+        }
+
+        body.locked-all [data-lockable] button,
+        body.locked-all [data-lockable] input,
+        body.locked-all [data-lockable] select {
+            cursor: not-allowed !important;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="app-header enhanced" id="appHeader">
+        <div class="nav-inner">
+            <div class="brand" data-lockable>
+                <div class="logo-wrap" aria-hidden="true">
+                    <img src="logo.png" alt="Company Logo" class="logo" />
+                </div>
+                <div class="brand-text">
+                    <h1>Log Analyzer</h1>
+                </div>
+            </div>
+            <div class="actions modern" data-lockable>
+                <label class="file-input" title="Select log file">
+                    <input type="file" id="logFiles" multiple aria-label="Select log file" />
+                    <span>Select File</span>
+                </label>
+                <div class="seg-group" role="group" aria-label="Export Format">
+                    <select id="exportFormat" class="sel sm" title="Export format" aria-label="Export format">
+                        <option value="json">JSON</option>
+                        <option value="csv">CSV</option>
+                        <option value="xlsx">XLSX</option>
+                    </select>
+                    <button id="btnExport" class="btn ghost seg" type="button" title="Export all issues">Export</button>
+                </div>
+                <button id="btnUpload" class="btn primary prominent" type="button"
+                    title="Upload & Process Logs">Upload</button>
+            </div>
+        </div>
+    </header>
+    <div id="selectedFilesBar" class="selected-files hidden" aria-live="polite"></div>
+    <div id="progressWrap" class="global-progress hidden" role="status" aria-live="polite">
+        <div class="gp-bar" id="gpBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span
+                id="gpFill"></span></div>
+        <div class="gp-meta"><span id="gpLabel">Idle</span><span id="gpPct">0%</span></div>
+    </div>
+    <div id="pipelineSteps" aria-label="Ingestion Steps" class="stepper">
+        <div class="step" data-step="select" aria-label="Select File"><span class="circle">1</span><span
+                class="label">Selected File</span></div>
+        <div class="connector" aria-hidden="true"></div>
+        <div class="step" data-step="upload" aria-label="Upload"><span class="circle">2</span><span
+                class="label">Upload</span></div>
+        <div class="connector" aria-hidden="true"></div>
+        <div class="step" data-step="index" aria-label="Indexing"><span class="circle">3</span><span
+                class="label">Indexing</span></div>
+        <div class="connector" aria-hidden="true"></div>
+        <div class="step" data-step="ready" aria-label="Ready"><span class="circle">4</span><span
+                class="label">Ready</span></div>
+    </div>
+    <div id="indexLockHint" class="lock-hint hidden" aria-live="polite" style="padding:6px 32px 0;">Indexing in progress
+        — some actions temporarily disabled.</div>
+    <main class="layout-simple" id="mainLayout">
+        <section class="pane left" aria-label="Issues" data-lockable>
+            <div class="toolbar">
+                <div class="filters" role="radiogroup" aria-label="Severity filter">
+                    <button class="filt active" data-filter="ALL" aria-pressed="true">All</button>
+                    <button class="filt" data-filter="ERROR" aria-pressed="false">Errors</button>
+                    <button class="filt" data-filter="RESOLVED" aria-pressed="false">Resolution Generated</button>
+                </div>
+                <input id="searchBox" class="search" placeholder="Search" aria-label="Search issues" />
+                <button id="btnAnalytics" class="btn xs ghost" type="button"
+                    title="Show analytics charts">Analytics</button>
+            </div>
+            <div class="counts-bar">
+                <span>Total: <strong id="countAll">0</strong></span>
+                <span>Errors: <strong id="countErr">0</strong></span>
+                <span>Resolution Generated: <strong id="sumResolved">0</strong></span>
+                <div class="mini-progress" aria-hidden="true"><span id="miniFill"></span></div>
+            </div>
+            <!-- Removed inline analytics drawer -->
+            <ul id="issuesList" class="issues" aria-label="Detected issues"></ul>
+            <ul id="issuesSkeleton" class="issues skeleton-list hidden" aria-hidden="true"></ul>
+            <div id="status" class="status" role="status" aria-live="polite"></div>
+            <div id="batchBar" class="batch-bar hidden" aria-hidden="true">
+                <span id="batchCount" class="meta">0 selected</span>
+                <button id="btnBatchResolve" class="btn xs" disabled>Batch Resolve</button>
+                <button id="btnBatchMark" class="btn xs" disabled>Mark Resolved</button>
+                <button id="btnBatchExport" class="btn xs" disabled>Export Sel</button>
+                <button id="btnBatchClear" class="btn xs ghost">Clear</button>
+            </div>
+        </section>
+        <section class="pane right" aria-label="Details" data-lockable>
+            <div id="emptyState" class="empty">Upload logs to begin.</div>
+            <div id="detailArea" class="detail" style="display:none;">
+                <div class="heading" id="metaLine"></div>
+                <div class="tabs" id="detailTabs">
+                    <button class="tab-btn active" data-tab="tabSnippet">Snippet</button>
+                    <button class="tab-btn" data-tab="tabResolution">Resolution</button>
+                    <button class="tab-btn" data-tab="tabSummary">Summary</button>
+                </div>
+                <div class="tab-panel active" id="tabSnippet">
+                    <div class="block">
+                        <div class="block-head">
+                            <h2>Snippet</h2>
+                            <button id="btnCopySnippet" class="btn xs ghost" type="button">Copy</button>
+                        </div>
+                        <pre id="snippetBox" class="code" tabindex="0"></pre>
+                    </div>
+                </div>
+                <div class="tab-panel" id="tabResolution">
+                    <div class="block" id="resolutionBlock">
+                        <div class="block-head">
+                            <h2>Resolution</h2>
+                            <div class="block-actions">
+                                <div id="resolveProgress" class="inline-progress hidden" aria-hidden="true">
+                                    <span></span></div>
+                                <button id="btnResolve" class="btn primary sm" type="button">Generate</button>
+                                <button id="btnToggleResolution" class="btn ghost sm" type="button"
+                                    style="display:none;">Show Full</button>
+                                <button id="btnCopy" class="btn ghost sm" type="button">Copy</button>
+                            </div>
+                        </div>
+                        <pre id="resolutionBox" class="code" tabindex="0"></pre>
+                    </div>
+                </div>
+                <div class="tab-panel" id="tabSummary">
+                    <div class="block" id="summaryBlock">
+                        <div class="block-head">
+                            <h2>Summary</h2>
+                            <div class="block-actions">
+                                <span id="summaryStatus" class="meta" style="font-size:12px;opacity:.7;"></span>
+                                <button id="btnToggleSummary" class="btn xs ghost" type="button"
+                                    style="display:none;">Show Full</button>
+                            </div>
+                        </div>
+                        <pre id="summaryBox" class="code" tabindex="0">Select an issue to generate summary.</pre>
+                    </div>
+                </div>
+                <div class="foot-flags">
+                    <span>QA Ready: <strong id="flagQa">false</strong></span>
+                    <span>Indexing: <strong id="flagIndex">false</strong></span>
+                    <span>Progress: <strong id="sumProgress">0%</strong></span>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer class="app-foot" data-lockable>© 2025 • Log Analyzer</footer>
+    <div id="toastHost" class="toast-host" aria-live="polite"></div>
+    <div id="overlay" class="overlay hidden" role="alert" aria-live="assertive">
+        <div class="ov-box">
+            <div class="spinner"></div>
+            <div class="ov-text" id="overlayMsg">Working...</div>
+        </div>
+    </div>
+    <!-- Analytics Modal -->
+    <div id="analyticsModal" class="analytics-modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="analyticsTitle">
+        <div class="analytics-content" role="document">
+            <div class="an-head">
+                <h2 id="analyticsTitle">Analytics Overview</h2>
+                <button id="analyticsClose" class="btn xs ghost" type="button"
+                    aria-label="Close analytics">Close</button>
+            </div>
+            <div class="kpi-grid" aria-label="Key metrics">
+                <div class="kpi" id="kpiTotal"><span class="kpi-label">Total Issues</span><span class="kpi-value"
+                        data-val="0">0</span></div>
+                <div class="kpi" id="kpiErrors"><span class="kpi-label">Errors</span><span class="kpi-value"
+                        data-val="0">0</span></div>
+                <div class="kpi" id="kpiResolved"><span class="kpi-label">Resolution Generated</span><span
+                        class="kpi-value" data-val="0">0</span></div>
+                <div class="kpi" id="kpiTop"><span class="kpi-label">Top Occurrence</span><span class="kpi-value"
+                        data-val="0">0</span></div>
+            </div>
+            <div class="ad-grid" aria-label="Charts">
+                <div class="ad-card" id="cardDonut">
+                    <h4>Severity Mix</h4><canvas id="chartSeverity" aria-label="Severity distribution"></canvas>
+                    <div class="ad-legend" id="legendSeverity"></div>
+                </div>
+                <div class="ad-card" id="cardBars">
+                    <h4>Top Errors</h4><canvas id="chartTop" aria-label="Top errors"></canvas>
+                </div>
+                <div class="ad-card" id="cardProgress">
+                    <h4>Resolution Progress</h4><canvas id="chartProgress" aria-label="Resolution progress"></canvas>
+                </div>
+                <div class="ad-card" id="cardTopList">
+                    <h4>Top Error List</h4>
+                    <ol id="topErrorList" class="top-error-list"
+                        style="margin:0;padding-left:18px;font-size:12px;line-height:1.35;max-height:160px;overflow:auto;">
+                    </ol>
+                </div>
+            </div>
+            <div class="an-actions" style="display:flex;gap:12px;justify-content:flex-end;margin-top:4px;">
+                <button id="btnEmailReport" class="btn primary sm" type="button">Email Report</button>
+            </div>
+        </div>
+    </div>
+    <!-- Email Report Modal -->
+    <div id="emailModal" class="analytics-modal hidden" role="dialog" aria-modal="true" aria-labelledby="emailTitle">
+        <div class="analytics-content" style="max-width:760px;" role="document">
+            <div class="an-head">
+                <h2 id="emailTitle">Send Report</h2>
+                <button id="emailClose" class="btn xs ghost" type="button" aria-label="Close email">Close</button>
+            </div>
+            <form id="emailForm" class="email-form" style="display:flex;flex-direction:column;gap:18px;">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <label for="emailFrom"
+                        style="font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--text-mute);">From</label>
+                    <input id="emailFrom" type="text" placeholder="me@company.com"
+                        style="padding:12px 14px;border:1px solid var(--border);background:var(--panel-alt);color:var(--text);border-radius:10px;font-size:var(--fs-xs);" />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <label for="emailTo"
+                        style="font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--text-mute);">To (semicolon
+                        separated)</label>
+                    <input id="emailTo" type="text" placeholder="user1@company.com; user2@company.com"
+                        style="padding:12px 14px;border:1px solid var(--border);background:var(--panel-alt);color:var(--text);border-radius:10px;font-size:var(--fs-xs);"
+                        required />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <label for="emailSubject"
+                        style="font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--text-mute);">Subject</label>
+                    <input id="emailSubject" type="text" placeholder="Log Analyzer Report"
+                        style="padding:12px 14px;border:1px solid var(--border);background:var(--panel-alt);color:var(--text);border-radius:10px;font-size:var(--fs-xs);" />
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <label for="emailBody"
+                        style="font-size:12px;font-weight:600;letter-spacing:.5px;color:var(--text-mute);">Message
+                        Preview (editable)</label>
+                    <textarea id="emailBody" rows="8"
+                        style="padding:12px 14px;border:1px solid var(--border);background:var(--panel-alt);color:var(--text);border-radius:10px;font-size:var(--fs-xs);font-family:var(--font-mono);white-space:pre-wrap;"></textarea>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+                    <button id="btnGenerateMailto" type="button" class="btn ghost sm">Generate Outlook Link</button>
+                    <button id="btnCopyEmailBody" type="button" class="btn ghost sm">Copy Body</button>
+                    <button id="btnSendOutlook" type="button" class="btn primary sm">Open in Outlook</button>
+                </div>
+                <p style="font-size:10px;opacity:.6;margin:0;">Outlook desktop will open with populated fields via a
+                    mailto link. For large bodies, copy & paste directly if truncated.</p>
+            </form>
+        </div>
+    </div>
+    <!-- Help Floating Action Button -->
+    <button id="helpFab" class="help-fab" aria-label="Open help and guidance" aria-haspopup="dialog"
+        aria-expanded="false" title="Help / How to use">?</button>
+    <!-- Help Modal (enhanced) -->
+    <div id="helpModal" class="help-modal hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+        <div class="help-content simple" role="document">
+            <div class="help-head">
+                <h2 id="helpTitle">How To Use</h2>
+                <button id="helpClose" class="help-close" type="button" aria-label="Close help">×</button>
+            </div>
+            <ul class="help-steps bullet" aria-label="Usage steps">
+                <li>Select <strong>File</strong> then press <em>Upload</em>.</li>
+                <li>Watch the stepper: <strong>Upload → Indexing → Ready</strong>.</li>
+                <li>Browse the issue list (left). Click an issue to view details.</li>
+                <li>Press <strong>Generate</strong> for an AI resolution; copy if useful.</li>
+                <li>Open <strong>Summary</strong> for a concise description.</li>
+                <li>Use search & filters to narrow results. Resolution Generated items show a ribbon.</li>
+                <li>Export all (top bar) or selected (batch bar) in your chosen format.</li>
+            </ul>
+            <p class="help-tip">Tip: Reopen this guide anytime with the ? button or press <kbd>Esc</kbd> to close.</p>
+        </div>
+    </div>
+    <script src="app.js?v=13"></script>
+</body>
+
+</html>

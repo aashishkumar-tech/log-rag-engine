@@ -1,0 +1,12 @@
+2026-01-08T09:12:34Z INFO  [starter] Application starting
+2026-01-08T09:12:35Z INFO  [loader] Loaded configuration from /etc/app/config
+2026-01-08T09:13:02Z WARN  [parser] Skipping malformed line: "user=\"john\" action"
+2026-01-08T09:13:15Z ERROR [auth] Authentication failed for user 'alice' (invalid credentials)
+2026-01-08T09:13:16Z ERROR [db] Connection timeout while writing to primary database
+2026-01-08T09:13:17Z INFO  [retry] Retrying DB write (attempt=1)
+2026-01-08T09:13:18Z ERROR [db] Connection timeout while writing to primary database
+2026-01-08T09:13:19Z ERROR [worker] Unhandled exception: IndexError('list index out of range')
+2026-01-08T09:13:20Z INFO  [worker] Worker restarting (pid=4321)
+2026-01-08T09:14:05Z WARN  [disk] Low disk space on /var (remaining=512MB)
+2026-01-08T09:15:42Z ERROR [service] Failed to load plugin 'metrics' (ModuleNotFoundError)
+2026-01-08T09:16:00Z INFO  [shutdown] Graceful shutdown initiated by user

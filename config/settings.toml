@@ -1,0 +1,45 @@
+[paths]
+faiss_index = "data/index/faiss.index"
+bm25_index  = "data/index/bm25/"
+metadata_db = "data/index/metadata.sqlite"
+
+[models]
+embedder_name   = "sentence-transformers/all-MiniLM-L6-v2"
+cross_encoder   = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+[chunking]
+context_window = 10
+max_chunk_chars = 1400
+deduplicate_info = true
+
+[retrieval]
+bm25_top_k = 50
+faiss_top_k = 50
+rerank_top_n = 12
+
+[generation]
+max_context_tokens = 3000
+max_answer_tokens  = 600
+structured_output  = true
+max_retries = 4
+base_backoff = 1.0
+backoff_jitter = 0.25
+
+[evaluation]
+goldset_path = "tests/gold_queries.json"
+
+[taxonomy]
+# Dynamic taxonomy / clustering thresholds (adjust as needed)
+sim_threshold = 0.82          # similarity needed to join existing cluster
+merge_similarity = 0.90       # centroid similarity to trigger cluster merge
+max_clusters = 500            # upper bound before pruning
+prune_min_count = 2           # clusters <= this may be pruned when over limit
+low_similarity_log = 0.60     # below this similarity is logged for audit
+cluster_save_interval = 500   # persist clusters every N classifications
+cache_size = 2048             # LRU cache entries for classification results
+
+[logging]
+level = "DEBUG"
+
+# LangChain runtime (env overrides still supported)
+# CHUNK_SIZE, CHUNK_OVERLAP, TOP_K, OPENAI_MODEL via environment.
