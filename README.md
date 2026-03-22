@@ -77,6 +77,23 @@ Perfect for:
 
 ## Architecture & Workflow
 
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+  A[User Query] --> B[Hybrid Retriever]
+  B --> C[BM25 Lexical Search]
+  B --> D[FAISS Semantic Search]
+  C --> E[Score Normalizer]
+  D --> E
+  E --> F[Top-K Merger]
+  F --> G[LLM Chain]
+  G --> H[Groq / OpenAI / Azure]
+  H --> I[Response + Citations]
+```
+
+---
+
 ### High-Level Flow
 
 ```text
