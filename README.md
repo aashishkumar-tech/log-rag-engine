@@ -1,3 +1,9 @@
+![Python](https://img.shields.io/badge/Python-3.8+-blue?logo=python)
+![LangChain](https://img.shields.io/badge/LangChain-0.3.x-green)
+![FastAPI](https://img.shields.io/badge/FastAPI-latest-teal?logo=fastapi)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen)
+
 # RAGPipeline
 
 A production-ready **Retrieval-Augmented Generation (RAG)** toolkit for intelligent log analysis, error diagnostics, and context-aware question answering using hybrid search (semantic + lexical).
