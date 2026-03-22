@@ -50,6 +50,9 @@ logs/
 # Data directories (contains uploaded files and indexes)
 data/
 backups/
+runs/
+*.faiss
+*.pkl
 *.zip
 
 # Temporary files
