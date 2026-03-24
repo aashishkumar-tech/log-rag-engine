@@ -1,3 +1,7 @@
+# RAG evaluation
+ragas>=0.1.0
+datasets>=2.14.0
+pandas>=2.0.0
 # Stable cohesive LangChain 0.2.x stack (removes incompatible langchain-huggingface)
 python-dotenv==1.0.1
 
@@ -13,14 +17,19 @@ langchain==0.2.17
 langchain-community==0.2.11
 langchain-openai==0.1.17
 # (No explicit langchain-core / langsmith pins; pulled compatible versions)
+langchain-core>=0.2.27,<0.3.0
+langsmith>=0.1.0,<0.2.0
+openai>=1.40.0,<2.0.0
+langchain-groq>=0.1.10,<0.2.0
+langchain-text-splitters>=0.2.4,<0.3.0
+jiter>=0.5.0,<0.6.0
 # Removed: langchain-huggingface (was forcing core>=0.3.59 + langsmith>=0.3.x)
 
 # OpenAI / Azure
 openai==1.40.6
 
 # API / Web
-fastapi==0.112.0
-uvicorn==0.30.1
+python-dotenv>=0.21.0
 
 # Upload parsing
 python-multipart
@@ -38,4 +47,4 @@ openpyxl==3.1.5
 # If cache issues: pip cache purge
 
 #Groq 
-langchain-groq>=0.1.0
+ 

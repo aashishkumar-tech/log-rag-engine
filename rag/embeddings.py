@@ -1,3 +1,36 @@
+# Dummy OpenAIEmbeddings and AzureOpenAIEmbeddings for compatibility with RAGAS or other libraries expecting them
+class OpenAIEmbeddings:
+    def __init__(self, model_name=None, **kwargs):
+        from sentence_transformers import SentenceTransformer
+        self.model = SentenceTransformer(os.getenv("HF_EMBEDDING_MODEL", "all-MiniLM-L6-v2"))
+
+    def embed_query(self, text: str):
+        v = self.model.encode(text)
+        try:
+            return list(map(float, v.tolist()))
+        except Exception:
+            return list(map(float, v))
+
+    def embed_documents(self, texts):
+        arr = self.model.encode(texts)
+        try:
+            return [list(map(float, a.tolist())) for a in arr]
+        except Exception:
+            return [list(map(float, a)) for a in arr]
+
+# Dummy AzureOpenAIEmbeddings (inherits from OpenAIEmbeddings)
+class AzureOpenAIEmbeddings(OpenAIEmbeddings):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+# Register these classes globally for all processes (including subprocesses)
+import sys, types
+embeddings_patch = types.SimpleNamespace(
+    OpenAIEmbeddings=OpenAIEmbeddings,
+    AzureOpenAIEmbeddings=AzureOpenAIEmbeddings
+)
+sys.modules['langchain_openai.embeddings'] = embeddings_patch
+sys.modules['langchain.embeddings.openai'] = embeddings_patch
 import os
 import os
 import hashlib
